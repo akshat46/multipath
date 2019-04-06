@@ -1,3 +1,5 @@
+import copy
+
 from ryu.base import app_manager
 from ryu.controller import mac_to_port
 from ryu.controller import ofp_event
@@ -81,7 +83,6 @@ class ProjectController(app_manager.RyuApp):
 
             hub.sleep(0.5)
 
-
     def send_ping_packet_controller(self, s1):
         '''
             Send a ping/ICMP packet between two switches.
@@ -164,7 +165,7 @@ class ProjectController(app_manager.RyuApp):
         latency = (time.time() - float(info[2])) * 1000  # in ms
         # print "s%s to s%s latency = %f ms" % (s1, s2, latency)
         self.delay[int(s1)][int(s2)] = latency
-    
+
     def minimum_distance(self, distance, Q):
         min = float('Inf')
         node = 0
@@ -175,115 +176,118 @@ class ProjectController(app_manager.RyuApp):
         return node
 
     def path(self, previous, node_start, node_end):
-        r=[]
-        p=node_end
+        r = []
+        p = node_end
         r.append(p)
-        q=previous[p]
+        q = previous[p]
         while q is not None:
             if q == node_start:
                 r.append(q)
                 break
-            p=q
+            p = q
             r.append(p)
-            q=previous[p]
-    
+            q = previous[p]
+
         r.reverse()
-        if node_start==node_end:
-            path=[node_start]
+        if node_start == node_end:
+            path = [node_start]
         else:
-            path=r
+            path = r
         return r
-    
-    def dijkstra(self,graph, node_start, node_end=None):
-        distances = {}     
-        previous = {}  
-    
+
+    def dijkstra(self, graph, node_start, node_end=None):
+        distances = {}
+        previous = {}
+
         distances = defaultdict(lambda: float('Inf'))
         previous = defaultdict(lambda: None)
-    
-        distances[node_start]=0
-        Q=set(switches)
-    
-        while len(Q)>0:
-            u = minimum_distance(distances, Q)
-            Q.remove(u)  
-    
-            for p in switches:
-                if graph[u][p]!=None:
-                    w = delay[u][p] 
+
+        distances[node_start] = 0
+        Q = set(self.switches)
+
+        while len(Q) > 0:
+            u = self.minimum_distance(distances, Q)
+            Q.remove(u)
+
+            for p in self.switches:
+                if u in graph and p in graph[u] and graph[u][p] != None:
+                    w = self.delay[u][p]
                     if distances[u] + w < distances[p]:
                         distances[p] = distances[u] + w
                         previous[p] = u
-    
+
         if node_end:
             return {'cost': distances[node_end],
-                    'path': path(previous, node_start, node_end)}
+                    'path': self.path(previous, node_start, node_end)}
         else:
             return (distances, previous)
-    
-    def get_paths(self, src,dst,first_port,final_port,max_k=2):
+
+    def get_paths(self, src, dst, max_k=2):
         print "YenKSP is called"
-        print "src=",src," dst=",dst, " first_port=", first_port, " final_port=", final_port, " max_k=", max_k 
-        adjacency2=defaultdict(lambda:defaultdict(lambda:None))
-        
-        distances, previous = dijkstra(self.adjacency,src)
+        # print "src=",src," dst=",dst, " first_port=", first_port, " final_port=", final_port, " max_k=", max_k
+        print "src=", src, " dst=", dst, " ,  max_k=", max_k
+
+        adjacency2 = defaultdict(lambda: defaultdict(lambda: None))
+
+        print self.adjacency
+        distances, previous = self.dijkstra(self.adjacency, src)
         A = [{'cost': distances[dst],
-                'path': path(previous, src, dst)}]
+              'path': self.path(previous, src, dst)}]
         B = []
-        #print "distances=", distances
-        #print  "previous=", previous
-        #print "A=", A
-        
+        # print "distances=", distances
+        # print  "previous=", previous
+        # print "A=", A
+
         if not A[0]['path']: return A
-        
+
         try:
             for k in range(1, max_k):
-                adjacency2=copy.deepcopy(self.adjacency)
-                #print "k=", k, " adjacency2=", adjacency2
+                adjacency2 = copy.deepcopy(self.adjacency)
+                # print "k=", k, " adjacency2=", adjacency2
                 for i in range(0, len(A[-1]['path']) - 1):
                     node_spur = A[-1]['path'][i]
-                    path_root = A[-1]['path'][:i+1]
-                #print "node_spur=", node_spur, " path_root=", path_root
-            
+                    path_root = A[-1]['path'][:i + 1]
+                    # print "node_spur=", node_spur, " path_root=", path_root
+
                     for path_k in A:
                         curr_path = path_k['path']
-                #print "curr_path=", curr_path, " i=", i
-                        if len(curr_path) > i and path_root == curr_path[:i+1]:
-                            adjacency2[curr_path[i]][curr_path[i+1]]=None
-                #print "link[", curr_path[i],"][", curr_path[i+1], "] is removed"
-                
-                    path_spur = dijkstra(adjacency2, node_spur, dst)
-            #print "path_spur=", path_spur
-        
+                        # print "curr_path=", curr_path, " i=", i
+                        if len(curr_path) > i and path_root == curr_path[:i + 1]:
+                            adjacency2[curr_path[i]][curr_path[i + 1]] = None
+                    # print "link[", curr_path[i],"][", curr_path[i+1], "] is removed"
+
+                    path_spur = self.dijkstra(adjacency2, node_spur, dst)
+                    # print "path_spur=", path_spur
+
                     if path_spur['path']:
                         path_total = path_root[:-1] + path_spur['path']
-                #print "path_total=", path_total
+                        # print "path_total=", path_total
                         dist_total = distances[node_spur] + path_spur['cost']
-                #print "dist_total=", path_total
+                        # print "dist_total=", path_total
                         potential_k = {'cost': dist_total, 'path': path_total}
-                #print "potential_k=", potential_k
-        
+                        # print "potential_k=", potential_k
+
                         if not (potential_k in B):
                             B.append(potential_k)
-                #print "B=", B
-        
+                # print "B=", B
+
                 if len(B):
                     B = sorted(B, key=itemgetter('cost'))
-                #print "after sorting, B=", B
+                    # print "after sorting, B=", B
                     A.append(B[0])
                     B.pop(0)
-            #print "after poping out the first element, B=", B, " A=", A
+                # print "after poping out the first element, B=", B, " A=", A
                 else:
                     break
         except:
             pass
-    
-        tmp=[]
+
+        tmp = []
         print "YenKSP->"
         for path_k in A:
             print path_k
             tmp.append(path_k)
-    
+
         return map(lambda x: x['path'], A)
 
     def get_link_cost(self, s1, s2):
@@ -293,7 +297,7 @@ class ProjectController(app_manager.RyuApp):
         e1 = self.adjacency[s1][s2]
         e2 = self.adjacency[s2][s1]
         bl = min(self.bandwidths[s1][e1], self.bandwidths[s2][e2])
-        ew = REFERENCE_BW/bl
+        ew = REFERENCE_BW / bl
         return ew
 
     def get_path_cost(self, path):
@@ -302,7 +306,7 @@ class ProjectController(app_manager.RyuApp):
         '''
         cost = 0
         for i in range(len(path) - 1):
-            cost += self.get_link_cost(path[i], path[i+1])
+            cost += self.get_link_cost(path[i], path[i + 1])
         return cost
 
     def get_optimal_paths(self, src, dst):
@@ -334,11 +338,10 @@ class ProjectController(app_manager.RyuApp):
         '''
         Returns a random OpenFlow group id
         '''
-        n = random.randint(0, 2**32)
+        n = random.randint(0, 2 ** 32)
         while n in self.group_ids:
-            n = random.randint(0, 2**32)
+            n = random.randint(0, 2 ** 32)
         return n
-
 
     def install_paths(self, src, first_port, dst, last_port, ip_src, ip_dst):
         computation_start = time.time()
@@ -372,18 +375,18 @@ class ProjectController(app_manager.RyuApp):
             for in_port in ports:
 
                 match_ip = ofp_parser.OFPMatch(
-                    eth_type=0x0800, 
-                    ipv4_src=ip_src, 
+                    eth_type=0x0800,
+                    ipv4_src=ip_src,
                     ipv4_dst=ip_dst
                 )
                 match_arp = ofp_parser.OFPMatch(
-                    eth_type=0x0806, 
-                    arp_spa=ip_src, 
+                    eth_type=0x0806,
+                    arp_spa=ip_src,
                     arp_tpa=ip_dst
                 )
 
                 out_ports = ports[in_port]
-                print out_ports 
+                print out_ports
 
                 if len(out_ports) > 1:
                     group_id = None
@@ -398,7 +401,7 @@ class ProjectController(app_manager.RyuApp):
                     buckets = []
                     # print "node at ",node," out ports : ",out_ports
                     for port, weight in out_ports:
-                        bucket_weight = int(round((1 - weight/sum_of_pw) * 10))
+                        bucket_weight = int(round((1 - weight / sum_of_pw) * 10))
                         bucket_action = [ofp_parser.OFPActionOutput(port)]
                         buckets.append(
                             ofp_parser.OFPBucket(
@@ -431,7 +434,7 @@ class ProjectController(app_manager.RyuApp):
 
                     self.add_flow(dp, 32768, match_ip, actions)
                     self.add_flow(dp, 1, match_arp, actions)
-        print "Path installation finished in ", time.time() - computation_start 
+        print "Path installation finished in ", time.time() - computation_start
         return paths_with_ports[0][src][1]
 
     def add_flow(self, datapath, priority, match, actions, buffer_id=None):
@@ -467,6 +470,8 @@ class ProjectController(app_manager.RyuApp):
         switch = ev.msg.datapath
         for p in ev.msg.body:
             self.bandwidths[switch.id][p.port_no] = p.curr_speed
+            # 测试带宽
+            print "p.curr_spend: ",p.curr_speed
 
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
     def _packet_in_handler(self, ev):
@@ -513,7 +518,7 @@ class ProjectController(app_manager.RyuApp):
                 h1 = self.hosts[src]
                 h2 = self.hosts[dst]
                 out_port = self.install_paths(h1[0], h1[1], h2[0], h2[1], src_ip, dst_ip)
-                self.install_paths(h2[0], h2[1], h1[0], h1[1], dst_ip, src_ip) # reverse
+                self.install_paths(h2[0], h2[1], h1[0], h1[1], dst_ip, src_ip)  # reverse
             elif arp_pkt.opcode == arp.ARP_REQUEST:
                 if dst_ip in self.arp_table:
                     self.arp_table[src_ip] = src
@@ -521,7 +526,7 @@ class ProjectController(app_manager.RyuApp):
                     h1 = self.hosts[src]
                     h2 = self.hosts[dst_mac]
                     out_port = self.install_paths(h1[0], h1[1], h2[0], h2[1], src_ip, dst_ip)
-                    self.install_paths(h2[0], h2[1], h1[0], h1[1], dst_ip, src_ip) # reverse
+                    self.install_paths(h2[0], h2[1], h1[0], h1[1], dst_ip, src_ip)  # reverse
 
         print pkt
 
