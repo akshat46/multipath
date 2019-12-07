@@ -1,5 +1,5 @@
 #!/usr/bin/python
-
+import sys
 from mininet.net import Mininet
 from mininet.node import Controller, RemoteController, OVSController
 from mininet.node import CPULimitedHost, Host, Node
@@ -11,7 +11,7 @@ from mininet.link import TCLink, Intf
 from subprocess import call
 
 def myNetwork():
-
+    CONTROLLER_IP = sys.argv[1:][0] if sys.argv[1:][0] else '127.0.0.1'
     net = Mininet( topo=None,
                    build=False,
                    ipBase='10.0.0.0/8')
@@ -19,7 +19,7 @@ def myNetwork():
     info( '*** Adding controller\n' )
     c0=net.addController(name='c0',
                       controller=RemoteController,
-                      ip='127.0.0.1',
+                      ip=CONTROLLER_IP,
                       protocol='tcp',
                       port=6633)
 
