@@ -11,7 +11,7 @@ from mininet.link import TCLink, Intf
 from subprocess import call
 
 def myNetwork():
-    CONTROLLER_IP = sys.argv[1:][0] if sys.argv[1:][0] else '127.0.0.1'
+    CONTROLLER_IP = sys.argv[1:][0] if len(sys.argv)>1 else '127.0.0.1'
     net = Mininet( topo=None,
                    build=False,
                    ipBase='10.0.0.0/8')
