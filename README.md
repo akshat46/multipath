@@ -32,16 +32,13 @@ sudo python multipath.py
 
 2. Open another terminal
 
-* ryu multipath Demo
+```bash   
+# ryu multipath Demo
+ryu-manager --observe-links ryu_multipath.py
 
-   
-    ryu-manager --observe-links ryu_multipath.py
-    
-*  ryu multipath with Yen's Algorithm (calculate on delay) Demo
-    
-    
-    ryu-manager --observe-links ryu_multipath_yens.py
-
+# ryu multipath with Yen's Algorithm (calculate on delay) Demo
+ryu-manager --observe-links ryu_multipath_yens.py
+```
     
 3. Run ping test
 
@@ -52,4 +49,3 @@ xterm h1
 # in xterm
 ping 10.0.0.2
 ```
-
