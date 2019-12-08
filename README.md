@@ -7,6 +7,21 @@ As seen on articles:
 
 Multipath routing is a routing method which finds multiple routes to a destination in a network topology. Here is an Implementation of a Multipath Routing SDN Controller in Ryu (OpenFlow1.3).
 
+## v3
+
+Contains python3 version of the project. Do the following to convert anymore files: 
+
+```bash
+# install 2to3 package
+pip install 2to3
+
+# cd to project root
+cd multipath
+
+# convert and save to directory v3/
+2to3 -n -W --add-suffix=3 --output-dir=v3 *.py
+```
+
 ## quickStart
 
 1. Run mininet topo
