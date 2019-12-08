@@ -21,15 +21,14 @@ def myNetwork():
                       controller=RemoteController,
                       ip=CONTROLLER_IP,
                       protocol='tcp',
-                      switch=OVSKernelSwitch,
                       port=6633)
 
     info( '*** Add switches\n')
-    s4 = net.addSwitch('s4')
-    s2 = net.addSwitch('s2')
-    s5 = net.addSwitch('s5')
-    s3 = net.addSwitch('s3')
-    s1 = net.addSwitch('s1')
+    s4 = net.addSwitch('s4',protocols='OpenFlow13',cls=OVSKernelSwitch)
+    s2 = net.addSwitch('s2',protocols='OpenFlow13',cls=OVSKernelSwitch)
+    s5 = net.addSwitch('s5',protocols='OpenFlow13',cls=OVSKernelSwitch)
+    s3 = net.addSwitch('s3',protocols='OpenFlow13',cls=OVSKernelSwitch)
+    s1 = net.addSwitch('s1',protocols='OpenFlow13',cls=OVSKernelSwitch)
 
     info( '*** Add hosts\n')
     h2 = net.addHost('h2', cls=Host, ip='10.0.0.2', defaultRoute=None)

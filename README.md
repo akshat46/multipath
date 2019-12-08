@@ -27,7 +27,7 @@ cd multipath
 1. Run mininet topo
 
 ```bash
-sudo python multipath.py 
+sudo python multipath.py <(option. default: localhost)remote IP address>
 ```
 
 2. Open another terminal
